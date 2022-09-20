@@ -3,11 +3,6 @@ This project is for the development of a simple internal tool to keep track of r
 may be required to understand field lengths, etc.
 
 ## Installation
-- **Clone the repo**
-
-  ```console 
-    git clone git@github.com:aadee92/reg-map.git
-  ```
  
  - **Copy content from ```env.sample.py``` file inside** ```config/settings/``` **folder and create ```env.py``` file in same location**.
  
