@@ -1,0 +1,110 @@
+{% extends 'base.html' %}
+
+<div class="container">
+  {% block body %}
+    {% include 'project/snippet/version-breadcrumb.html' with project=project %}
+
+    {% if request.user.is_authenticated %}
+      <div class="my-4 container text-right">
+        <button
+          data-url="{% url 'project:version-create' %}?project_field_disabled=true&project={{ project.id }}"
+          data-target="create-update-modal"
+          data-title="Create New Version"
+          class="btn btn-success text-right text-white modal-popup"
+        >
+          Create New Version
+        </button>
+      </div>
+    {% endif %}
+
+    <div class="container my-4 main-div">
+      <div class="card">
+        <div class="card-header">
+          Project Information
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <span class="font-weight-bold col-md-2">Project:</span>
+            <span class="col-md-10">{{ project.name }}</span>
+          </div>
+          <div class="row mt-2">
+            <span class="font-weight-bold col-md-2">Description:</span>
+            <span class="col-md-10">{{ project.description }}</span>
+          </div>
+          <div class="row mt-2">
+            <span class="font-weight-bold col-md-2">Address Size:</span>
+            <span class="col-md-10">{{ project.address_size }}</span>
+          </div>
+          <div class="row mt-2">
+            <span class="font-weight-bold col-md-2">Addressable Word:</span>
+            <span class="col-md-10">{{ project.word_size }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container main-div">
+      <div class="table-responsive-sm">
+        <table class="table table-striped">
+          <thead>
+          <tr class="table-primary text-center">
+            <th scope="col">Version</th>
+            <th scope="col">Last Modified</th>
+            <th scope="col">Created</th>
+            <th scope="col">Action</th>
+          </tr>
+          </thead>
+          <tbody class="text-center">
+          {% for version in versions %}
+            <tr>
+              <td>
+                <a href="{% url 'project:register-list' version.id %}" class="text-decoration-none">
+                  {{ version.name }}
+                </a>
+              </td>
+              <td>
+                {% if version.updated_at %}
+                  {{ version.updated_at | date:"j/n/Y" }}
+                {% else %}
+                  N/A
+                {% endif %}
+              </td>
+              <td>{{ version.updated_at | date:"j/n/Y" }}</td>
+              <td>
+                <a
+                  class="btn btn-sm btn-success font-weight-bold modal-popup"
+                  title="Copy Existing Version"
+                  href="{% url 'project:version-copy' %}?version={{ version.id }}"
+                >&#10697;
+              </a>
+                <button
+                  class="btn btn-sm btn-info font-weight-bold modal-popup"
+                  data-toggle="tooltip"
+                  data-placement="top"
+                  title="Edit Current Version"
+                  data-url="{% url 'project:version-update' pk=version.id %}?project={{ project.id }}"
+                  data-target="create-update-modal"
+                  data-title="Update {{ version.name }}"
+                >🖋
+                </button>
+                <button
+                  class="btn btn-sm btn-danger font-weight-bold"
+                  data-toggle="tooltip"
+                  title="Delete Current Version"
+                  id="R-delete"
+                  name="V-delete-{{version.id}}"
+                >&#10005;
+                </button>
+              </td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-5">
+        {% include 'snippets/pagination.html' %}
+      </div>
+    </div>
+  {% endblock %}
+</div>

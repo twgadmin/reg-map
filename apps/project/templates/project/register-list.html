@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+{% load custom_tags %}
+
+<div class="container">
+
+  {% block body %}
+    {% include 'project/snippet/version-breadcrumb.html' with project=project version=version %}
+
+    {% if request.user.is_authenticated %}
+      <div class="my-4 container text-right">
+        <button
+          data-url="{% url 'project:register-create' %}?version_field_disabled=true&version={{ version.id }}"
+          data-target="create-update-modal"
+          data-title="Create New Version"
+          class="btn btn-success text-right text-white modal-popup"
+        >
+          Create New Register
+        </button>
+      </div>
+    {% endif %}
+    <div class="container my-4 main-div">
+      <div class="card">
+        <div class="card-header">
+          Project Information
+        </div>
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-4">
+              <span class="font-weight-bold mr-2">Project:</span>
+              <span>{{ project.name }}</span>
+            </div>
+            <div class="col-md-4">
+              <span class="font-weight-bold mr-2">Address Size:</span>
+              <span>{{ project.address_size }}</span>
+            </div>
+            <div class="col-md-4">
+              <span class="font-weight-bold mr-2">Addressable Word:</span>
+              <span>{{ project.word_size }}</span>
+            </div>
+            <div class="col-md-12 mt-2">
+              <span class="font-weight-bold">Description:</span>
+              <span class="mr-2">{{ project.description }}</span>
+            </div>
+            <div class="col-md-12 mt-2">
+              <span class="font-weight-bold">Version:</span>
+              <span class="mr-2">{{ version.name }}</span>
+            </div>
+            <div class="col-md-12 mt-2">
+              <div class="font-weight-bold">Actions:</div>
+              <div class="d-inline-flex mt-1">
+                <button
+                  data-url="{% url 'project:version-create' %}?project={{ project.id }}"
+                  data-target="create-update-modal"
+                  data-title="Create New Version"
+                  class="btn btn-success text-right text-white modal-popup"
+                >
+                  Add new Version
+                </button>
+                <form method="post" enctype="multipart/form-data" action="{% url 'project:file-upload' %}">
+                  {% csrf_token %}
+                  <label for="file" class="btn btn-primary mx-3">
+                    Import
+                  </label>
+                  <input id="file" name="file" type="file" accept=".xlsx" hidden/>
+                  <input id="version_id" name="version" value="{{version.id}}" hidden/>
+                  <input type="submit" id="import_submit" hidden />
+                </form>
+                <a href="{% url 'project:file-download' pk=version.id %}" class="btn btn-info" >Export</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="container main-div">
+      <div class="table-responsive-sm">
+        <table class="table table-striped table-bordered table-hover table-condensed text-xs-left" id="main-table">
+          <thead>
+            <tr class="table-primary text-center">
+              <th scope="col">Address</th>
+              <th scope="col">Register Name</th>
+              <th scope="col">Size</th>
+              <th scope="col">Access</th>
+              <th scope="col">Default</th>
+              <th scope="col">Description</th>
+              <th scope="col">Action</th>
+            </tr>
+          </thead>
+          <tbody class="text-center">
+          {% set_address project.address_size as max_addr %}
+          {% set_value 0 as addr %}
+          {% set_value 0 as max_from %}
+          {% set_length registers as registers_length %}
+          {% for register in registers %}
+            {% set_value addr as temp %}
+            {% if register.address > addr %}
+              {% set_hex_from addr as from %}
+              {% set_hex_to register.address as to %}
+              {% set_scale addr register.address as scale %}
+              <tr class="reserved" id="reserved-register-{{register.id}}">
+                <td> <input type="text" class="input-default w-100" id="N-reserved" name="N-reserved-{{version.id}}-{{register.id}}" value="{{ from }} ... {{to}}" />  </td>
+                <td></td>
+                <td> {{ scale }} </td>
+                <td></td>
+                <td></td>
+                <td> reserved </td>
+                <td></td>
+              </tr>
+              
+              {% set_value register.address as addr %}
+            {% endif %}            
+            {% set_next_addr addr register.size as addr %}
+            {% get_address registers forloop.counter0 as addr_info %}
+            <tr id="record-{{ register.id }}">
+              <td> <input type="text" class="input-default w-75" id="R-address" data-range="{{addr_info.prev}}-{{ addr_info.next }}" name="R-address-{{version.id}}-{{ register.id }}" value="{{ register.address_to_hex }}" /> </td>
+              <td> <input type="text" class="input-name" id="R-name" value="{{ register.name }}" name="R-name-{{version.id}}-{{ register.id }}"/> </td>
+              <td> <input type="number" class="input-default" min="1" max="{% calc_delta temp addr_info.next %}" id="R-size" value="{{ register.size }}" name="R-size-{{version.id}}-{{ register.id }}"/> </td>
+              <td> <input type="text" class="input-default" id="R-access" value="{{ register.access }}" name="R-access-{{version.id}}-{{ register.id }}"/> </td>
+              <td> <input type="text" class="input-default" id="R-default" value="{{ register.default }}" name="R-default-{{version.id}}-{{ register.id }}"/> </td>
+              <td>
+                  <textarea class="input-description w-100 p-2 mb-2" id="R-description" cols="30" rows="3" name="R-description-{{version.id}}-{{ register.id }}">  {{ register.description }} </textarea>
+                  <table class="table table-bordered  text-xs-left">
+                    <thead>
+                      <tr>
+                        <th> upper </th>
+                        <th> lower </th>
+                        <th> Type </th>
+                        <th> Range/Value </th>
+                        <th> Scale </th>
+                        <th> Unit </th>
+                        <th> Name </th>
+                        <th> Description </th>
+                        <th> Action </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                    {% for field in register.fields.all %}
+                    <tr id="record-{{ field.id}}">
+                      <td> <input type="text" class="input-default" id="F-upper" name="F-range_upper-{{version.id}}-{{ register.id }}-{{ field.id}}" value="{{ field.range_upper }}"/> </td>
+                      <td> <input type="text" class="input-default" id="F-lower" name="F-range_lower-{{version.id}}-{{ register.id }}-{{ field.id}}" value="{{ field.range_lower }}"/> </td>
+                      <td>
+                        <select id="F-type" name="F-type-{{version.id}}-{{ register.id }}-{{ field.id}}">
+                            <optgroup label="Number">
+                              <option value="UINT" {% if field.type == 'UINT' %} selected {% endif %}>UINT</option>
+                              <option value="INT" {% if field.type == 'INT' %} selected {% endif %}>INT</option>
+                              <option value="BCD" {% if field.type == 'BCD' %} selected {% endif %}>BCD</option>
+                              <option value="DOUBLE" {% if field.type == 'DOUBLE' %} selected {% endif %}>DOUBLE64</option>
+                              <option value="FLOAT" {% if field.type == 'FLOAT' %} selected {% endif %}>FLOAT32</option>
+                            </optgroup>
+                            <optgroup label="TEXT"> 
+                              <option value="ASCII" {% if field.type == 'ASCII' %} selected {% endif %}>ASCII</option>
+                              <option value="UTF8" {% if field.type == 'UTF8' %} selected {% endif %}>UTF8</option>
+                            </optgroup>
+                            <optgroup label="Selection">
+                              <option value="MUX" {% if field.type == 'MUX' %} selected {% endif %}>MUX</option>
+                              <option value="FLAG_AH" {% if field.type == 'FLAG_AH' %} selected {% endif %}>FLAG_AH</option>
+                              <option value="FLAG_AL" {% if field.type == 'FLAG_AL' %} selected {% endif %}>FLAG_AL</option>
+                            </optgroup>
+                          </select>
+                        </td>
+                        {% if field.value_min and field.value_max %}
+                        <td> <input type="text" class="input-default" id="F-value_min" name="F-value_min-{{version.id}}-{{ register.id }}-{{ field.id}}" value="{{ field.value_min }},{{ field.value_max }}"/> </td>
+                        {% else %}
+                        <td> <input type="text" class="input-default" id="F-value_min" name="F-value_min-{{version.id}}-{{ register.id }}-{{ field.id}}" value="{{ field.value_min }}"/> </td>
+                        {% endif %}
+                        
+                        <td> <input type="text" class="input-default" id="F-unit_scale" name="F-unit_scale-{{version.id}}-{{ register.id }}-{{ field.id}}" value="{{ field.unit_scale }}"/> </td>
+                        <td> <input type="text" class="input-default" id="F-unit" name="F-unit_type-{{version.id}}-{{ register.id }}-{{ field.id}}" value="{{ field.unit_type }}"/> </td>
+                        <td> <input type="text" class="input-default w-75" id="F-name" name="F-name-{{version.id}}-{{ register.id }}-{{ field.id}}" value="{{ field.name }}"/> </td>
+                        <td> <input type="text" class="input-description-desc" id="F-description" name="F-description-{{version.id}}-{{ register.id }}-{{ field.id}}" value="{{ field.description }}"/> </td>
+                        <td>
+                            <button
+                              class="btn btn-sm btn-danger font-weight-bold"                  
+                              title="Delete Current Field"
+                              id="R-delete"
+                              name="F-delete-{{version.id}}-{{field.id}}-{{register.id}}"
+                            >&#10005;
+                            </button>
+                        </td>
+                      </tr>
+                      
+                      {% for choice in field.choices.all %}
+                      <tr class="choice" id="record-{{choice.id}}" data-choice-field_id="{{field.id}}">
+                        <td colspan="3" style="background-color: white; border: white;"></td>
+                        <td> <input type="text" class="input-range" id="C-value" name="C-value-{{version.id}}-{{ register.id }}-{{ field.id}}-{{choice.id}}" value="{{ choice.value }}"/> </td>
+                        <td></td><td></td>
+                        <td> <input type="text" class="input-default w-75" id="C-name" name="C-name-{{version.id}}-{{ register.id }}-{{ field.id}}-{{choice.id}}" value="{{ choice.name }}"/> </td>
+                        <td> <input type="text" class="input-description-desc" id="C-description" name="C-desc-{{version.id}}-{{ register.id }}-{{ field.id}}-{{choice.id}}" value="{{ choice.desc }}"/> </td>
+                        <td>
+                          <button
+                            class="btn btn-sm btn-danger font-weight-bold"                  
+                            title="Delete Current Choice"
+                            id="R-delete"
+                            name="C-delete-{{version.id}}-{{choice.id}}"
+                          >&#10005;
+                          </button>
+                        </td>
+                      </tr> 
+                      {% endfor %}
+                      {% if field.type == 'MUX' %}
+                      <tr class="reserved choice" id="record-{{register.id}}-{{field.id}}">
+                        <td colspan="3" style="background-color: white; border: white;"></td>
+                        <td> <input type="text" class="input-range" id="C-value" name="N-value-{{version.id}}-{{ register.id }}-{{ field.id}}-{{choice.id}}" value="{{ choice.value}}"/> </td>
+                        <td>reserved</td><td></td>
+                        <td> <input type="text" class="input-default w-75" id="C-name" name="N-name-{{version.id}}-{{ register.id }}-{{ field.id}}-{{choice.id}}" value="{{ choice.name }}"/> </td>
+                        <td> <input type="text" class="input-description-desc" id="C-description" name="N-desc-{{ register.id }}-{{ field.id}}-{{choice.id}}" value="{{ choice.desc }}"/> </td>
+                        <td></td>
+                      </tr>
+                      {% endif %} 
+                    </tr>                    
+                    {% endfor%}
+                    {% set_reserved_range fields project.word_size  as ws %}
+                    {% if ws > 0 %}
+                    {% get_random_number 0 as random_num_field %}
+                    <tr class="reserved" id="reserved-field-{{random_num_field}}">
+                      <td> <input type="text" class="input-default" id="F-upper" name="N-range_upper-{{version.id}}-{{ register.id }}" value="{{ws}}"/> {{ field.id }}</td>
+                      <td> <input type="text" class="input-default" id="F-lower" name="N-range_lower-{{version.id}}-{{ register.id }}" value="0"/> </td>
+                      <td>
+                        <select id="F-type" name="F-type-{{version.id}}-{{ register.id }}">
+                            <optgroup label="Number">
+                              <option value="UINT" {% if field.type == 'UINT' %} selected {% endif %}>UINT</option>
+                              <option value="INT" {% if field.type == 'INT' %} selected {% endif %}>INT</option>
+                              <option value="BCD" {% if field.type == 'BCD' %} selected {% endif %}>BCD</option>
+                              <option value="DOUBLE" {% if field.type == 'DOUBLE' %} selected {% endif %}>DOUBLE64</option>
+                              <option value="FLOAT" {% if field.type == 'FLOAT' %} selected {% endif %}>FLOAT32</option>
+                            </optgroup>
+                            <optgroup label="TEXT"> 
+                              <option value="ASCII" {% if field.type == 'ASCII' %} selected {% endif %}>ASCII</option>
+                              <option value="UTF8" {% if field.type == 'UTF8' %} selected {% endif %}>UTF8</option>
+                            </optgroup>
+                            <optgroup label="Selection">
+                              <option value="MUX" {% if field.type == 'MUX' %} selected {% endif %}>MUX</option>
+                              <option value="FLAG_AH" {% if field.type == 'FLAG_AH' %} selected {% endif %}>FLAG_AH</option>
+                              <option value="FLAG_AL" {% if field.type == 'FLAG_AL' %} selected {% endif %}>FLAG_AL</option>
+                            </optgroup>
+                          </select>
+                        </td>
+                        <td>reserved</td>
+                        <td> <input type="text" class="input-default" id="F-unit_scale" name="N-unit_scale-{{version.id}}-{{ register.id }}" value=""/> </td>
+                        <td> <input type="text" class="input-default" id="F-unit" name="N-unit_type-{{version.id}}-{{ register.id }}" value=""/> </td>
+                        <td> <input type="text" class="input-default w-75" id="F-name" name="N-name-{{version.id}}-{{ register.id }}" value=""/> </td>
+                        <td> <input type="text" class="input-description-desc" id="F-description" name="N-description-{{version.id}}-{{ register.id }}" value=""/> </td>
+                        <td></td>
+                      </tr>
+                      {% endif %}
+                  </tbody>
+                </table>
+              </td>
+              <td>
+                <button
+                  class="btn btn-sm btn-danger font-weight-bold"                  
+                  title="Delete Current Register"
+                  id="R-delete"
+                  name="R-delete-{{version.id}}-{{register.id}}"
+                >&#10005;
+                </button>
+              </td>
+            </tr>
+            {% if registers_length == forloop.counter0 %}
+            <tr class="reserved" id="reserved-register-{{register.id}}">
+              <td> <input type="text" class="input-default w-100" id="N-reserved" name="N-reserved-{{version.id}}-New" value="{% set_hex_to addr_info.next %} ..  {% set_hex_to max_addr%}"/> </td>
+              <td></td>
+              <td> {{ scale }} </td>
+              <td></td>
+              <td></td>
+              <td> reserved </td>
+              <td></td>
+            </tr>
+            {% endif %}
+          {% endfor %}
+          {% if registers_length == -1 %}
+            <tr class="reserved">
+              <td> <input type="text" class="input-default w-100" id="N-reserved" name="N-reserved-{{version.id}}" value="0x0000 ..  {% set_hex_to max_addr%}"/> </td>
+              <td></td>
+              <td> {{ scale }} </td>
+              <td></td>
+              <td></td>
+              <td> reserved </td>
+              <td></td>
+            </tr>
+          {% endif %}
+          </tbody>
+        </table>
+      </div>
+
+      <div class="mt-5">
+        {% include 'snippets/pagination.html' %}
+      </div>
+    </div>
+  {% endblock %}
+</div>
+
+

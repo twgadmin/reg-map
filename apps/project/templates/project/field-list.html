@@ -1,0 +1,122 @@
+{% extends 'base.html' %}
+{% load custom_tags %}
+
+<div class="container">
+  {{ fields }}
+  {% block body %}
+  {% include 'project/snippet/version-breadcrumb.html' with project=project version=version %}
+
+  {% if request.user.is_authenticated %}
+  <div class="my-4 container text-right">
+    <button data-url="{% url 'project:register-create' %}?version_field_disabled=true&version={{ version.id }}"
+      data-target="create-update-modal" data-title="Create New Version"
+      class="btn btn-success text-right text-white modal-popup">
+      Create New Field
+    </button>
+  </div>
+  {% endif %}
+
+  <div class="container main-div">
+    <div class="table-responsive-sm">
+      <table class="table table-striped table-bordered table-hover table-condensed text-xs-left">
+        <thead>
+          <tr class="table-primary text-center">
+            <th scope="col">ID</th>
+            <th scope="col">Range Lower</th>
+            <th scope="col">Range Upper</th>
+            <th scope="col">Type</th>
+            <th scope="col">Scale</th>
+            <th scope="col">Name</th>
+            <th scope="col">Description</th>
+            <th scope="col">Value Min</th>
+            <th scope="col">Value Max</th>
+            <th scope="col">Action</th>
+          </tr>
+        </thead>
+        <tbody class="text-center">
+          {% for field in fields %}
+          <tr>
+            <td>{{ field.id}}</td>
+            <td><input type="text" class="input-default" id="F-lower" name="F-range_lower-{{ field.register.id }}-{{ field.id}}" value="{{ field.range_lower }}"/></td>
+            <td><input type="text" class="input-default" id="F-upper" name="F-range_upper-{{ field.register.id }}-{{ field.id}}" value="{{ field.range_upper }}"/></td>
+            <td>
+              <select id="F-type" name="F-type-{{ field.register.id }}-{{ field.id}}">
+                  <optgroup label="Number">
+                    <option value="UINT" {% if field.type == 'UINT' %} selected {% endif %}>UINT</option>
+                    <option value="INT" {% if field.type == 'INT' %} selected {% endif %}>INT</option>
+                    <option value="BCD" {% if field.type == 'BCD' %} selected {% endif %}>BCD</option>
+                    <option value="DOUBLE" {% if field.type == 'DOUBLE' %} selected {% endif %}>DOUBLE64</option>
+                    <option value="FLOAT" {% if field.type == 'FLOAT' %} selected {% endif %}>FLOAT32</option>
+                  </optgroup>
+                  <optgroup label="TEXT"> 
+                    <option value="ASCII" {% if field.type == 'ASCII' %} selected {% endif %}>ASCII</option>
+                    <option value="UTF8" {% if field.type == 'UTF8' %} selected {% endif %}>UTF8</option>
+                  </optgroup>
+                  <optgroup label="Selection">
+                    <option value="MUX" {% if field.type == 'MUX' %} selected {% endif %}>MUX</option>
+                    <option value="FLAG_AH" {% if field.type == 'FLAG_AH' %} selected {% endif %}>FLAG_AH</option>
+                    <option value="FLAG_AL" {% if field.type == 'FLAG_AL' %} selected {% endif %}>FLAG_AL</option>
+                  </optgroup>
+                </select>
+              </td>
+
+            <td><input type="text" class="input-default" id="F-unit_scale" name="F-unit_scale-{{ field.register.id }}-{{ field.id}}" value="{{ field.unit_scale }}"/> </td>
+            <td><input type="text" class="input-default" id="F-name" name="F-name-{{ field.register.id }}-{{ field.id}}" value="{{ field.name }}"/> </td>
+            <td><textarea type="text" class="input-description w-100 p-2 mb-2" id="R-description" cols="30" rows="3" id="F-description" name="F-description-{{ field.register.id }}-{{ field.id}}">{{ field.description }}</textarea></td>
+            <td><input type="text" class="input-default" id="F-value_min" name="F-value_min-{{ field.register.id }}-{{ field.id}}" value="{{ field.value_min }}"/></td>
+            <td><input type="text" class="input-default" id="F-value_max" name="F-value_max-{{ field.register.id }}-{{ field.id}}" value="{{ field.value_max }}"/></td>
+            <td>
+              <button class="btn btn-sm btn-danger font-weight-bold" title="Delete Current Choice" id="R-delete"
+                name="C-delete-{{choice.id}}">&#10005;
+              </button>
+            </td>
+  
+
+            {% for choice in field.choices.all %}
+          <tr class="choice">
+            <td></td>
+            <td></td>
+            <td></td>
+            <td> <input type="text" class="input-range" id="C-value"
+                name="C-value-{{ field.register.id }}-{{ field.id}}-{{choice.id}}" value="{{ choice.value }}" /> </td>
+            <td></td>
+            <td></td>
+            <td> <input type="text" class="input-default w-75" id="C-name"
+                name="C-name-{{ field.register.id }}-{{ field.id}}-{{choice.id}}" value="{{ choice.name }}" /> </td>
+            <td> <input type="text" class="input-description-desc" id="C-description"
+                name="C-desc-{{ field.register.id }}-{{ field.id}}-{{choice.id}}" value="{{ choice.desc }}" /> </td>
+            <td>
+              <button class="btn btn-sm btn-danger font-weight-bold" title="Delete Current Choice" id="R-delete"
+                name="C-delete-{{choice.id}}">&#10005;
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+          {% if field.type == 'MUX' %}
+          <tr class="reserved">
+            <td></td>
+            <td></td>
+            <td></td>
+            <td> <input type="text" class="input-range" id="C-value"
+                name="N-value-{{ register.id }}-{{ field.id}}-{{choice.id}}" value="{{ choice.value}}" /> </td>
+            <td>reserved</td>
+            <td></td>
+            <td> <input type="text" class="input-default w-75" id="C-name"
+                name="N-name-{{ register.id }}-{{ field.id}}-{{choice.id}}" value="{{ choice.name }}" /> </td>
+            <td> <input type="text" class="input-description-desc" id="C-description"
+                name="N-desc-{{ register.id }}-{{ field.id}}-{{choice.id}}" value="{{ choice.desc }}" /> </td>
+            <td></td>
+          </tr>
+          {% endif %}
+          </tr>
+          {% endfor%}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="mt-5">
+      {% include 'snippets/pagination.html' %}
+    </div>
+  </div>
+  {% endblock %}
+</div>

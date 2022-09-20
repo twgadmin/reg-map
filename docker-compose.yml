@@ -1,0 +1,10 @@
+version: "3.9"
+   
+services:
+  web:
+    build: .
+    command: uwsgi --ini uwsgi.ini
+    volumes:
+      - .:/home/jansher/Projects/Python/reg-map
+    ports:
+      - "8000:8000"

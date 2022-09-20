@@ -1,0 +1,49 @@
+.table-condensed{
+  font-size: 12px;
+}
+td {
+  text-align: left;
+}
+th {
+  text-align: left;
+}
+
+.main-div {
+  max-width: 90%;
+}
+
+input {
+  background-color: rgba(0,0,0,.01);
+  border: none;
+}
+
+.input-default {
+  width: 50px;
+  padding: 6px 6px;
+}
+
+.input-name {
+  width: 250px;
+  padding: 6px 6px;
+}
+
+.input-range {
+  width: 80px;
+  padding: 6px 6px;
+}
+select {
+  margin: 6px 6px;
+}
+.input-description-desc {
+  width: 200px;
+  padding-top: 6px;
+}
+.reserved {
+  background-color: darkgray !important;
+}
+input:invalid {
+  border: red solid 3px;
+}
+.choice {
+  background-color: white;
+}

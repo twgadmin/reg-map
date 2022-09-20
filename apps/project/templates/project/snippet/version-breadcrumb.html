@@ -1,0 +1,32 @@
+<div class="container main-div">
+  <nav aria-label="breadcrumb" class="mt-5">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item">
+        <a href="{% url 'common:home' %}">Projects</a>
+      </li>
+
+      <li class="breadcrumb-item" aria-current="page">
+        {% if version %}
+          <a href="{% url 'project:version-list' project.id %}">
+            {{ project.name }}
+          </a>
+        {% else %}
+          <span class="text-muted">{{ project.name }}</span>
+        {% endif %}
+      </li>
+
+      {% if version %}
+        <li class="breadcrumb-item active" aria-current="page">
+          {% if register %}
+            <a href="{% url 'project:register-list' version.id %}">
+              {{ version.name }}
+            </a>
+          {% else %}
+            <span class="text-muted">{{ version.name }}</span>
+          {% endif %}
+        </li>
+      {% endif %}
+
+    </ol>
+  </nav>
+</div>

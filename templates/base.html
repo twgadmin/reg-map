@@ -1,0 +1,422 @@
+{% load static %} {% load custom_tags %}
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Register Map</title>
+
+    <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/toastr.min.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/custom.css' %}" />
+  </head>
+
+  <body>
+    <nav
+      class="navbar navbar-dark bg-primary navbar-expand-lg"
+      style="background-color: #e3f2fd"
+    >
+      <div class="container-fluid">
+        <div class="navbar-brand">
+          <a
+            href="{% url 'common:home' %}"
+            class="text-white text-decoration-none"
+          >
+            Register Map
+          </a>
+        </div>
+        <div class="float-right">
+          {% if request.user.is_authenticated %}
+          <a href="{% url 'common:logout' %}" class="btn btn-outline-light"
+            >Logout</a
+          >
+          {% else %}
+          <a href="{% url 'common:login' %}" class="btn btn-outline-light"
+            >Log In</a
+          >
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Modal that is commonly used for create update pop-up -->
+      <div
+        class="modal fade"
+        id="create-update-modal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="exampleModalCenterTitle"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog modal-dialog-centered" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exampleModalLongTitle">
+                Modal title
+              </h5>
+              <button
+                type="button"
+                class="close"
+                data-dismiss="modal"
+                aria-label="Close"
+              >
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body"></div>
+          </div>
+        </div>
+      </div>
+    </nav>
+    {% block body %} {% endblock %}
+    <script src="{% static 'js/jquery.min.js' %}"></script>
+    <script src="{% static 'js/popper.min.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'js/toastr.min.js' %}"></script>
+
+    <script>
+      $(function () {
+        $('[data-toggle="tooltip"]').tooltip();
+      });
+    </script>
+
+    <script>
+      toastr.options = {
+        positionClass: "toast-bottom-right",
+        showDuration: "300",
+        hideDuration: "1000",
+        timeOut: "5000",
+        extendedTimeOut: "1000",
+        showEasing: "swing",
+        hideEasing: "linear",
+        showMethod: "fadeIn",
+        hideMethod: "fadeOut",
+      };
+    </script>
+
+    {% if messages %} {% for message in messages %} 
+    {% if message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS %}
+    <script>
+      toastr.success("{{ message }}");
+    </script>
+    {% endif %} {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}
+    <script>
+      toastr.error("{{ message }}");
+    </script>
+    {% endif %} {% endfor %} {% endif %}
+
+    <script>
+      $("#button-id-cancel").click(() => {
+        window.history.back();
+      });
+    </script>
+
+    <script>
+      $(".modal-popup").click(function () {
+        let url = $(this).data("url");
+        let target = "#" + $(this).data("target");
+        let title = $(this).data("title");
+        if (url) {
+          $.get(url, function (data) {
+            $(target).find(".modal-body").html(data);
+            $(target).find(".modal-title").html(title);
+            $(target).modal("show");
+          });
+        }
+      });
+    </script>
+
+    <script>
+      $(document).on(
+        "change",
+        "#R-address, #R-name, #R-size, #R-access, #R-default, #R-description, #N-reserved, #F-upper, #F-lower, #F-unit_scale, #F-type, #F-unit, #F-name, #F-description, #F-value_min, #F-value_max,  #C-value, #C-scale, #C-unit, #C-name, #C-description",
+        function (event) {
+          var val = event.target.value;
+          var type = event.target.name.split("-");
+          const parent_row_id = $(this).closest("tr")[0].id;
+          row_info = {
+            status: type[0],
+            type: type[1],
+            version_id: type[2],
+            register_id: type[3],
+            field_id: type[4],
+            choice_id: type[5],
+            value: val,
+          };
+
+          if (row_info.type === "address") {
+            var valid = event.target.attributes["data-range"].value.split("-");
+            var from = parseInt(valid[0]);
+            var to = parseInt(valid[1]);
+            var updated = parseInt(val, 16);
+            if (updated > to || updated < from) {
+              alert(
+                "You have to choose the value between " +
+                  valid[0] +
+                  "to " +
+                  valid[1] +
+                  "."
+              );
+              $(location).attr("href", "");
+              return;
+            }
+          }
+          if (row_info.type == "reserve") {
+            updateData(row_info, parent_row_id);
+          } else {
+            updateData(row_info, parent_row_id);
+          }
+        }
+      );
+
+      function updateData(data, parent_row_id) {
+        $.ajax({
+          type: "get",
+          url: `/project/updateData`,
+          data: data,
+          async: false,
+          success: function (response) {
+            if (data.status === "N") {
+              if (data.register_id && data.field_id) {
+                data.type = "field_choice";
+              }
+              appendNewRecord(response.new_record, parent_row_id, data);
+            } else if (data.status === "F") {
+              if (data.type === "type") {
+                if (
+                  data.value === "MUX" ||
+                  data.value === "FLAG_AH" ||
+                  data.value === "FLAG_AL"
+                ) {
+                  appendNewFieldChoice(data, parent_row_id);
+                } else {
+                  removeFieldChoice(data, parent_row_id);
+                }
+              }
+            }
+          },
+        }).done(function (data) {
+          console.log(data.status);
+        });
+      }
+
+      function appendNewFieldChoice(data, target_id) {
+        $(`#${target_id}`).after(
+          `
+              <tr class="reserved choice" id="record-${data.register_id}-${data.field_id}">
+                              <td colspan="3" style="background-color: white; border: white;"></td>
+                              <td> <input type="text" class="input-range" id="C-value" name="N-value-${data.version_id}-${data.register_id}-${data.field_id}-{{choice.id}}" value="{{ choice.value}}"/> </td>
+                              <td>reserved</td><td></td>
+                              <td> <input type="text" class="input-default w-75" id="C-name" name="N-name-${data.version_id}-${data.register_id}-${data.field_id}-{{choice.id}}" value="{{ choice.name }}"/> </td>
+                              <td> <input type="text" class="input-description-desc" id="C-description" name="N-desc-${data.version_id}-${data.register_id}-${data.field_id}-{{choice.id}}" value="{{ choice.desc }}"/> </td>
+                              <td></td>
+                            </tr>
+              `
+        );
+      }
+
+      function removeFieldChoice(data, parent_row_id) {
+        console.log("removing field choice because type changed");
+        const row_siblings = $(`#record-${data.field_id}`).siblings(
+          `*[data-choice-field_id='${row_info.field_id}']`
+        );
+        if (row_siblings.length > 0) {
+          row_siblings.remove();
+        }
+      }
+
+      function appendNewRecord(new_record, parent_row_id, data) {
+        console.log("parent_row_id", parent_row_id);
+        console.log(new_record, data.type, data.register_id);
+        let new_row;
+        if (data.type === "reserved") {
+          new_row = getRegisterRowData(new_record);
+        } else if (data.type === "field_choice") {
+          new_row = getFieldChoiceRowData(new_record, data);
+        } else {
+          new_row = getFieldRowData(new_record, data.register_id);
+        }
+        $(`#${parent_row_id}`).before(new_row);
+      }
+
+      function getFieldChoiceRowData(new_field_choice, data) {
+        console.log("new field choice");
+        return `<tr class="choice" id="record-${new_field_choice.id}" data-choice-field_id="${data.field_id}">
+                        <td colspan="3" style="background-color: white; border: white;"></td>                       
+                        <td> <input type="text" class="input-range" id="C-value" name="C-value-${data.version_id}-${data.register_id}-${data.field_id}-${new_field_choice.id}" value="${new_field_choice.value}"> </td>
+                        <td></td><td></td>
+                        <td> <input type="text" class="input-default w-75" id="C-name" name="C-name-${data.version_id}-${data.register_id}-${data.field_id}-${new_field_choice.id}" value=""> </td>
+                        <td> <input type="text" class="input-description-desc" id="C-description" name="C-desc-${data.version_id}-${data.register_id}-${data.field_id}-${new_field_choice.id}" value=""> </td>
+                        <td>
+                          <button class="btn btn-sm btn-danger font-weight-bold" title="Delete Current Choice" id="R-delete" name="C-delete-${data.version_id}-${new_field_choice.id}">✕
+                          </button>
+                        </td>
+                      </tr>`;
+      }
+
+      function getFieldRowData(new_field, register_id) {
+        console.log("new field");
+        return `<tr id="record-${new_field.id}">
+                            <td> <input type="text" class="input-default" id="F-upper" name="F-range_upper-{{version.id}}-${register_id}-${new_field.id}" value="${new_field.range_upper}"/> </td>
+                            <td> <input type="text" class="input-default" id="F-lower" name="F-range_lower-{{version.id}}-${register_id}-${new_field.id}" value="${new_field.range_lower}"/> </td>
+                            <td>
+                              <select id="F-type" name="F-type-{{version.id}}-${register_id}-${new_field.id}">
+                                  <optgroup label="Number">
+                                    <option value="UINT" {% if field.type == 'UINT' %} selected {% endif %}>UINT</option>
+                                    <option value="INT" {% if field.type == 'INT' %} selected {% endif %}>INT</option>
+                                    <option value="BCD" {% if field.type == 'BCD' %} selected {% endif %}>BCD</option>
+                                    <option value="DOUBLE" {% if field.type == 'DOUBLE' %} selected {% endif %}>DOUBLE64</option>
+                                    <option value="FLOAT" {% if field.type == 'FLOAT' %} selected {% endif %}>FLOAT32</option>
+                                  </optgroup>
+                                  <optgroup label="TEXT">
+                                    <option value="ASCII" {% if field.type == 'ASCII' %} selected {% endif %}>ASCII</option>
+                                    <option value="UTF8" {% if field.type == 'UTF8' %} selected {% endif %}>UTF8</option>
+                                  </optgroup>
+                                  <optgroup label="Selection">
+                                    <option value="MUX" {% if field.type == 'MUX' %} selected {% endif %}>MUX</option>
+                                    <option value="FLAG_AH" {% if field.type == 'FLAG_AH' %} selected {% endif %}>FLAG_AH</option>
+                                    <option value="FLAG_AL" {% if field.type == 'FLAG_AL' %} selected {% endif %}>FLAG_AL</option>
+                                  </optgroup>
+                                </select>
+                              </td>
+                              <td> <input type="text" class="input-default" id="F-value_min" name="F-value_min-{{version.id}}-${register_id}-${new_field.id}" value="None"/> </td>
+                              <td> <input type="text" class="input-default" id="F-unit_scale" name="F-unit_scale-{{version.id}}-${register_id}-${new_field.id}" value="None"/> </td>
+                              <td> <input type="text" class="input-default" id="F-unit" name="F-unit_type-{{version.id}}-${register_id}-${new_field.id}" value="None"/> </td>
+                              <td> <input type="text" class="input-default w-75" id="F-name" name="F-name-{{version.id}}-${register_id}-${new_field.id}" value="${new_field.name}"/> </td>
+                              <td> <input type="text" class="input-description-desc" id="F-description" name="F-description-{{version.id}}-${register_id}-${new_field.id}" value=""/> </td>
+                              <td>
+                                  <button
+                                    class="btn btn-sm btn-danger font-weight-bold"
+                                    title="Delete Current Field"
+                                    id="R-delete"
+                                    name="F-delete-{{version.id}}-${new_field.id}-${register_id}"
+                                  >&#10005;
+                                  </button>
+                              </td>
+                            </tr>
+                            </tr>
+      `;
+      }
+
+      function getRegisterRowData(new_register) {
+        console.log("new register");
+        const temp_random_num = Math.floor(Math.random() * 9999);
+        return `<tr id="record-${new_register.id}">
+                    <td> <input type="text" class="input-default w-75" id="R-address" data-range="1-513" name="R-address-{{version.id}}-${new_register.id}" value="${new_register.address_to_hex}" </td>
+                    <td> <input type="text" class="input-name" id="R-name" value="${new_register.name}" name="R-name-{{version.id}}-${new_register.id}"> </td>
+                    <td> <input type="number" class="input-default" min="1" max="512" id="R-size" value="${new_register.size}" name="R-size-{{version.id}}-${new_register.id}"> </td>
+                    <td> <input type="text" class="input-default" id="R-access" value="None" name="R-access-{{version.id}}-${new_register.id}"> </td>
+                    <td> <input type="text" class="input-default" id="R-default" value="None" name="R-default-{{version.id}}-${new_register.id}"> </td>
+                    <td>
+                        <textarea class="input-description w-100 p-2 mb-2" id="R-description" cols="30" rows="3" name="R-description-{{version.id}}-${new_register.id}"> ${new_register.description} </textarea>
+                        <table class="table table-bordered  text-xs-left">
+                          <thead>
+                            <tr>
+                              <th> upper </th>
+                              <th> lower </th>
+                              <th> Type </th>
+                              <th> Range/Value </th>
+                              <th> Scale </th>
+                              <th> Unit </th>
+                              <th> Name </th>
+                              <th> Description </th>
+                              <th> Action </th>
+                            </tr>
+                          </thead>
+                          <tbody>
+
+
+
+                          <tr class="reserved" id="Reserved-${temp_random_num}">
+                            <td> <input type="text" class="input-default" id="F-upper" name="N-range_upper-{{version.id}}-${new_register.id}" value="255"> </td>
+                            <td> <input type="text" class="input-default" id="F-lower" name="N-range_lower-{{version.id}}-${new_register.id}" value="0"> </td>
+                            <td>
+                              <select id="F-type" name="F-type-{{version.id}}-${new_register.id}">
+                                  <optgroup label="Number">
+                                    <option value="UINT">UINT</option>
+                                    <option value="INT">INT</option>
+                                    <option value="BCD">BCD</option>
+                                    <option value="DOUBLE">DOUBLE64</option>
+                                    <option value="FLOAT">FLOAT32</option>
+                                  </optgroup>
+                                  <optgroup label="TEXT">
+                                    <option value="ASCII">ASCII</option>
+                                    <option value="UTF8">UTF8</option>
+                                  </optgroup>
+                                  <optgroup label="Selection">
+                                    <option value="MUX">MUX</option>
+                                    <option value="FLAG_AH">FLAG_AH</option>
+                                    <option value="FLAG_AL">FLAG_AL</option>
+                                  </optgroup>
+                                </select>
+                              </td>
+                              <td>reserved</td>
+                              <td> <input type="text" class="input-default" id="F-unit_scale" name="N-unit_scale-{{version.id}}-${new_register.id}" value=""> </td>
+                              <td> <input type="text" class="input-default" id="F-unit" name="N-unit_type-{{version.id}}-${new_register.id}" value=""> </td>
+                              <td> <input type="text" class="input-default w-75" id="F-name" name="N-name-{{version.id}}-${new_register.id}" value=""> </td>
+                              <td> <input type="text" class="input-description-desc" id="F-description" name="N-description-{{version.id}}-${new_register.id}" value=""> </td>
+                              <td></td>
+                            </tr>
+
+                        </tbody>
+                      </table>
+                    </td>
+                    <td>
+                      <button class="btn btn-sm btn-danger font-weight-bold" title="Delete Current Register" id="R-delete" name="R-delete-{{version.id}}-${new_register.id}">✕
+                      </button>
+                    </td>
+                  </tr>`;
+      }
+
+      $(document).on("click", "button#R-delete", function (event) {
+        var val = event.target.value;
+        var type = event.target.name.split("-");
+        row_info = {
+          status: type[0],
+          type: type[1],
+          version_id: type[2],
+          register_id: type[3],
+          field_id: type[4],
+          choice_id: type[5],
+          value: val,
+        };
+
+        $.ajax({
+          type: "get",
+          url: `/project/updateData`,
+          data: row_info,
+          async: false,
+          success: function (response) {
+            [row_info.register_id, row_info.field_id] = [
+              row_info.field_id,
+              row_info.register_id,
+            ];
+            if (row_info.status === "R") {
+              console.log("deleted register");
+              $(`#record-${row_info.field_id}`).remove();
+            } else if (row_info.status === "F") {
+              console.log("deleted field");
+              const row_siblings = $(`#record-${row_info.field_id}`).siblings(
+                `*[data-choice-field_id='${row_info.field_id}']`
+              );
+              $(`#record-${row_info.field_id}`).remove();
+              if (row_siblings.length > 0) {
+                row_siblings.remove();
+              }
+              $(`#record-${row_info.register_id}-${row_info.field_id}`)
+                .closest("tr")[0]
+                .remove();
+            } else if (row_info.status === "C") {
+              console.log("deleted field_choice");
+              $(`#record-${row_info.register_id}`).remove();
+            }
+          },
+        }).done(function (data) {
+          console.log(data.status);
+        });
+      });
+
+      $("#file").change(function (event) {
+        $("#import_submit").click();
+      });
+    </script>
+  </body>
+</html>

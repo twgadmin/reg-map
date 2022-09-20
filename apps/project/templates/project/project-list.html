@@ -1,0 +1,90 @@
+{% if request.user.is_authenticated %}
+  <div class="my-4 container text-right">
+    <button
+      data-url="{% url 'project:create' %}"
+      data-target="create-update-modal"
+      data-title="Create New Project"
+      class="btn btn-success text-right text-white modal-popup"
+    >
+      Create New Project
+    </button>
+  </div>
+{% endif %}
+
+<div class="container main-div">
+  <div class="table-responsive-sm">
+    <table class="table table-striped">
+      <thead>
+      <tr class="table-primary text-center">
+        <th scope="col">Project</th>
+        <th scope="col">Last Modified</th>
+        <th scope="col">Created</th>
+        <th scope="col" width="15%">Description</th>
+        <th scope="col">Address Size</th>
+        <th scope="col">Word Size</th>
+        {% if request.user.is_authenticated %}
+          <th scope="col">Action</th>
+        {% endif %}
+      </tr>
+      </thead>
+      <tbody class="text-center">
+      {% for project in projects %}
+        <tr>
+          <td>
+            <a href="{% url 'project:version-list' project.id %}" class="text-decoration-none">
+              {{ project.name }}
+            </a>
+          </td>
+          <td>
+            {% if project.updated_at %}
+              {{ project.updated_at | date:"j/n/Y" }}
+            {% else %}
+              N/A
+            {% endif %}
+          </td>
+          <td>{{ project.created_by }}</td>
+          <td data-toggle="tooltip" data-placement="top" title="{{ project.description }}">
+            {{ project.description |truncatechars_html:15 }}
+          </td>
+          <td>{{ project.address_size }}</td>
+          <td>{{ project.word_size }}</td>
+          {% if request.user.is_authenticated %}
+            <td>
+              <button
+                  class="btn btn-sm btn-success font-weight-bold modal-popup"
+                  data-toggle="tooltip"
+                  data-placement="top"
+                  title="Add New Version"
+                  data-target="create-update-modal"
+                  data-url="{% url 'project:version-create' %}?project={{ project.id }}"
+              >➕
+              </button>
+              <button
+                class="btn btn-sm btn-info font-weight-bold modal-popup"
+                data-toggle="tooltip"
+                data-placement="top"
+                title="Edit Current Project"
+                data-url="{% url 'project:update' project.id %}"
+                data-target="create-update-modal"
+                data-title="Update {{ project.name }}"
+              >🖋
+              </button>
+              <button
+                class="btn btn-sm btn-danger font-weight-bold"
+                data-toggle="tooltip"
+                data-placement="top"
+                title="Delete Current Project"
+              >&#10005;
+              </button>
+            </td>
+          {% endif %}
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-5">
+    {% include 'snippets/pagination.html' %}
+  </div>
+</div>
